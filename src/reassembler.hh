@@ -32,11 +32,11 @@ public:
 
   // How many bytes are stored in the Reassembler itself?
   uint64_t bytes_pending() const;
-  Reassembler();
 
 private:
   uint64_t un_assembled_index_ { 0 };
   uint64_t last_index_ { 0 };
+  bool is_last_ { false };
   std::map<uint64_t, std::string> cache_ {};
-  uint64_t pending_size {0};
+  void merge( std::string& new_data, uint64_t new_first_index );
 };
