@@ -18,4 +18,6 @@ public:
 
 private:
   std::optional<Wrap32> zero_point_ {};
+  bool is_sync_ { false };
+  bool is_fin_ { false };
 };
