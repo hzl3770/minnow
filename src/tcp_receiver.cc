@@ -20,7 +20,6 @@ void TCPReceiver::receive( TCPSenderMessage message, Reassembler& reassembler, W
     }
     reassembler.insert( first_index, message.payload, message.FIN, inbound_stream );
   }
-
 }
 
 TCPReceiverMessage TCPReceiver::send( const Writer& inbound_stream ) const
