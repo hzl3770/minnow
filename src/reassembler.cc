@@ -20,6 +20,10 @@ void Reassembler::insert( uint64_t first_index, const string& data, bool is_last
     return;
   }
 
+  if ( data.empty() ) {
+    return;
+  }
+
   uint64_t const first_unacceptable_idx = un_assembled_index_ + output.available_capacity();
   if ( first_index >= first_unacceptable_idx ) {
     return;
