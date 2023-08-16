@@ -56,7 +56,7 @@ EthernetFrame make_frame( const EthernetAddress& src,
   frame.header.src = src;
   frame.header.dst = dst;
   frame.header.type = type;
-  frame.payload = payload;
+  frame.payload = std::move( payload );
   return frame;
 }
 
@@ -87,7 +87,7 @@ int main()
         make_frame(
           target_eth,
           local_eth,
-          EthernetHeader::TYPE_ARP,
+          EthernetHeader::TYPE_ARP, // NOLINTNEXTLINE(*-suspicious-*)
           serialize( make_arp( ARPMessage::OPCODE_REPLY, target_eth, "192.168.0.1", local_eth, "4.3.2.1" ) ) ),
         {} } );
 
@@ -101,12 +101,13 @@ int main()
         ReceiveFrame( make_frame( target_eth, local_eth, EthernetHeader::TYPE_IPv4, serialize( reply_datagram ) ),
                       reply_datagram ) );
       test.execute( ExpectNoFrame {} );
-
+      clog << "sbydx" << endl;
       // incoming frames to another Ethernet address (not ours) should be ignored
       const EthernetAddress another_eth = { 1, 1, 1, 1, 1, 1 };
       test.execute( ReceiveFrame(
         make_frame( target_eth, another_eth, EthernetHeader::TYPE_IPv4, serialize( reply_datagram ) ), {} ) );
     }
+    clog << "*******" << endl;
 
     {
       const EthernetAddress local_eth = random_private_ethernet_address();
@@ -143,6 +144,7 @@ int main()
                     EthernetHeader::TYPE_ARP,
                     serialize( make_arp( ARPMessage::OPCODE_REQUEST, remote_eth, "10.0.1.1", {}, "5.5.5.5" ) ) ),
         {} } );
+
       test.execute( ExpectFrame { make_frame(
         local_eth,
         remote_eth,
@@ -202,7 +204,7 @@ int main()
         make_frame(
           target_eth,
           local_eth,
-          EthernetHeader::TYPE_ARP,
+          EthernetHeader::TYPE_ARP, // NOLINTNEXTLINE(*-suspicious-*)
           serialize( make_arp( ARPMessage::OPCODE_REPLY, target_eth, "192.168.0.1", local_eth, "4.3.2.1" ) ) ),
         {} } );
 

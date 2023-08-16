@@ -1,6 +1,7 @@
 #pragma once
 
 #include "address.hh"
+#include "arp_message.hh"
 #include "ethernet_frame.hh"
 #include "ipv4_datagram.hh"
 
@@ -40,6 +41,22 @@ private:
 
   // IP (known as Internet-layer or network-layer) address of the interface
   Address ip_address_;
+
+  static constexpr size_t expired_ms = 30000;
+  static constexpr size_t pending_ms = 5000;
+
+  std::unordered_map<uint32_t, EthernetAddress> arp_cache_ {};
+  std::unordered_map<uint32_t, size_t> arp_cache_remainder_ {};
+
+  std::list<EthernetFrame> pending_frames_ {};
+  std::unordered_map<uint32_t, size_t> arp_pending_remainder_ {};
+
+  // src_ip -> dgram
+  std::unordered_map<uint32_t, InternetDatagram> unknown_dst_datagrams_ {};
+
+  EthernetFrame make_frame( const EthernetAddress& dst, uint16_t type, std::vector<Buffer> payload );
+
+  ARPMessage make_arp( uint16_t opcode, EthernetAddress target_ethernet_address, uint32_t target_ip_address );
 
 public:
   // Construct a network interface with given Ethernet (network-access-layer) and IP (internet-layer)
