@@ -22,40 +22,57 @@ NetworkInterface::NetworkInterface( const EthernetAddress& ethernet_address, con
 // Address::ipv4_numeric() method.
 void NetworkInterface::send_datagram( const InternetDatagram& dgram, const Address& next_hop )
 {
+  clog << "DEBUG: NetworkInterface::send_datagram: " << dgram.header.to_string() << " next_hop: " << next_hop.ip()
+       << endl;
+
+  clog << "DEBUG: NetworkInterface::send_datagram: ip_address_: " << ip_address_.ip() << endl;
+  clog << "DEBUG: NetworkInterface::send_datagram: ethernet_address_: " << to_string( ethernet_address_ ) << endl;
+
   const auto dst_ip = next_hop.ipv4_numeric();
   auto it = arp_cache_.find( dst_ip );
   if ( it != arp_cache_.end() ) {
+    clog << "DEBUG: NetworkInterface::send_datagram: arp_cache_ hit: " << to_string( it->second ) << endl;
     auto ef = make_frame( it->second, EthernetHeader::TYPE_IPv4, serialize( dgram ) );
-    pending_frames_.emplace_back( ef );
+    pending_frames_.emplace_back( std::move( ef ) );
+    clog << "DEBUG: NetworkInterface::send_datagram: pending_frames_.size(): " << pending_frames_.size() << endl;
     return;
   }
 
+  clog << "DEBUG: NetworkInterface::send_datagram: arp_cache_ miss" << endl;
   // 构造arp request
   auto arp_msg = make_arp( ARPMessage::OPCODE_REQUEST, {}, next_hop.ipv4_numeric() );
+  clog << "DEBUG: NetworkInterface::send_datagram: arp_msg: " << arp_msg.to_string() << endl;
   auto ef = make_frame( ETHERNET_BROADCAST, EthernetHeader::TYPE_ARP, serialize( arp_msg ) );
-  pending_frames_.emplace_back( ef );
+  pending_frames_.emplace_back( std::move( ef ) );
 
   unknown_dst_datagrams_[dst_ip] = dgram;
+  clog << "DEBUG: NetworkInterface::send_datagram: pending_frames_.size(): " << pending_frames_.size() << endl;
 }
 
 // frame: the incoming Ethernet frame
 optional<InternetDatagram> NetworkInterface::recv_frame( const EthernetFrame& frame )
 {
+  clog << "DEBUG: NetworkInterface::recv_frame: receiver_mac" << to_string( ethernet_address_ ) << endl;
+  clog << "DEBUG: NetworkInterface::recv_frame: receiver_ip" << ip_address_.ip() << endl;
+  clog << "DEBUG: NetworkInterface::recv_frame: " << frame.header.to_string() << endl;
   if ( frame.header.dst != ETHERNET_BROADCAST && frame.header.dst != ethernet_address_ ) {
     return {};
   }
 
   if ( frame.header.type == EthernetHeader::TYPE_IPv4 ) {
+    clog << "DEBUG: NetworkInterface::recv_frame: TYPE_IPv4" << endl;
     InternetDatagram dgram;
     auto ret = parse( dgram, frame.payload );
     if ( !ret ) {
+      clog << "DEBUG: NetworkInterface::recv_frame: parse failed" << endl;
       return {};
     }
-
+    clog << "DEBUG: NetworkInterface::recv_frame: dgram: " << dgram.header.to_string() << endl;
     return { dgram };
   }
 
   if ( frame.header.type == EthernetHeader::TYPE_ARP ) {
+    clog << "DEBUG: NetworkInterface::recv_frame: TYPE_ARP" << endl;
     ARPMessage arg_msg;
     auto ret = parse( arg_msg, frame.payload );
     if ( !ret ) {
@@ -66,7 +83,7 @@ optional<InternetDatagram> NetworkInterface::recv_frame( const EthernetFrame& fr
     if ( arg_msg.target_ip_address != ip_address_.ipv4_numeric() ) {
       return {};
     }
-
+    clog << "DEBUG: NetworkInterface::recv_frame: arg_msg: " << arg_msg.to_string() << endl;
     if ( arg_msg.opcode == ARPMessage::OPCODE_REPLY ) {
       arp_cache_[arg_msg.sender_ip_address] = arg_msg.sender_ethernet_address;
       arp_cache_remainder_[arg_msg.sender_ip_address] = expired_ms;
@@ -119,13 +136,19 @@ void NetworkInterface::tick( const size_t ms_since_last_tick )
 optional<EthernetFrame> NetworkInterface::maybe_send()
 {
   if ( pending_frames_.empty() ) {
+    clog << "DEBUG: NetworkInterface::maybe_send: pending_frames_.empty()" << endl;
     return {};
   }
 
   auto frame = pending_frames_.front();
   pending_frames_.pop_front();
+  clog << "DEBUG: NetworkInterface::maybe_send: " << frame.header.to_string() << endl;
+
+  // 打印pending_frames_的长度
+  clog << "DEBUG: NetworkInterface::maybe_send: pending_frames_.size(): " << pending_frames_.size() << endl;
 
   if ( frame.header.type == EthernetHeader::TYPE_ARP ) {
+    clog << "DEBUG: NetworkInterface::maybe_send: TYPE_ARP" << endl;
     ARPMessage arp;
     auto ret = parse( arp, frame.payload );
     if ( !ret ) {

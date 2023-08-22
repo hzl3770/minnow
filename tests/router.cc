@@ -131,6 +131,7 @@ private:
                                AsyncNetworkInterface& y )
   {
     deliver( x_name, x, y_name, y );
+    clog << "****deliver***" << endl;
     deliver( y_name, y, x_name, x );
   }
 
@@ -205,7 +206,9 @@ public:
     exchange_frames(
       "router.default", _router.interface( default_id ), "default_router", host( "default_router" ).interface() );
     exchange_frames( "router.eth0", _router.interface( eth0_id ), "applesauce", host( "applesauce" ).interface() );
+    clog << "****1***" << endl;
     exchange_frames( "router.eth2", _router.interface( eth2_id ), "cherrypie", host( "cherrypie" ).interface() );
+    clog << "****2***" << endl;
     exchange_frames( "router.hs4", _router.interface( hs4_id ), "hs_router", host( "hs_router" ).interface() );
     exchange_frames( "router.uun3",
                      _router.interface( uun3_id ),
@@ -218,12 +221,17 @@ public:
   void simulate()
   {
     for ( unsigned int i = 0; i < 256; i++ ) {
+      clog << endl << i << endl;
       _router.route();
+      clog << "-----" << i << "--******" << endl;
       simulate_physical_connections();
+      clog << "-----" << i << "------end" << endl;
     }
 
     for ( auto& host : _hosts ) {
+      clog << "Checking host " << host.second.name() << "\n";
       host.second.check();
+      clog << "Host " << host.second.name() << " OK\n";
     }
   }
 
